@@ -3,16 +3,16 @@
 -- Universal Plan Schema generation
 --
 -- Query 1: sales_order_detail_transformation
---   Pattern: generic
+--   Pattern: fact_multi_scenario
 
 /**************************************************************************
-Generated plan for sales_order_detail
-Mapped fields based on provided FIELD MAPPINGS and SCHEMA
+Generated plan for sales_order_detail table transformation.
 **************************************************************************/
 
 -- Query: sales_order_detail_transformation
--- Pattern: generic
+-- Pattern: fact_multi_scenario
 -- Coverage: 49 rows
+-- WARNING: unresolved items: The source table 'True' is not a valid table name. It needs to be replaced with a valid table name or CTE.
 
 WITH
 uom_conversion_view AS (
@@ -123,6 +123,16 @@ sto_joined AS (
   LEFT JOIN sto_received_qty r
     ON r.ebeln = o.order_nbr
    AND r.ebelp = o.order_line_nbr
+),
+invoice_dt_lookup AS (
+  SELECT
+    vbfa.vbelv AS order_vbeln,
+    vbfa.posnv AS order_posnr,
+    MIN(vbfa.erdat) AS first_invoice_dt,
+    MAX(vbfa.erdat) AS last_invoice_dt
+  FROM vbfa vbfa
+  WHERE vbfa.vbtyp_n = 'M'
+  GROUP BY vbfa.vbelv, vbfa.posnv
 )
 
 SELECT
@@ -175,4 +185,4 @@ SELECT
   CAST(NULL AS string) AS sls_ord_key,
   CAST(NULL AS string) AS sls_ord_sched_key,
   CAST(NULL AS string) AS flag_is_blanket
-FROM True t
+FROM sto_joined t
