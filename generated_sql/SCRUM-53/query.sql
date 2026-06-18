@@ -1,20 +1,21 @@
 -- ============================================================
 -- Query     : d_buyer_transformation
 -- Table Type: DIMENSION
--- Purpose   : Transform and load buyer data
+-- Purpose   : Transform and load data into 'd_buyer'
 -- ============================================================
 WITH
   _source AS (
     SELECT
-      NULL AS buyer_cd,
-      NULL AS buyer_nm,
-      'byd_brsbn' AS src_sys_cd
+      sap_dim_buyer.cee_id AS buyer_cd,
+      sap_dim_buyer.tee_id AS buyer_nm,
+      'EDP source name' AS src_sys_cd
     FROM sap_dim_buyer
   ),
   _scd AS (
     SELECT *,
-           ROW_NUMBER() OVER (PARTITION BY NULL ORDER BY CURRENT_TIMESTAMP DESC) AS _rn
+           ROW_NUMBER() OVER (PARTITION BY sap_dim_buyer.cee_id ORDER BY CURRENT_TIMESTAMP DESC) AS _rn
     FROM   _source
+    WHERE  sap_dim_buyer.cee_id IS NOT NULL
   ),
   _transformed AS (
     SELECT
