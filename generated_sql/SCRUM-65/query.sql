@@ -6,7 +6,7 @@
 --   Pattern: fact_multi_scenario
 
 /**************************************************************************
-Generated plan for sales_order_detail with multiple scenarios.
+Generated plan for sales_order_detail with multi-scenario logic.
 **************************************************************************/
 
 -- Query: sales_order_detail_transformation
@@ -14,31 +14,23 @@ Generated plan for sales_order_detail with multiple scenarios.
 -- Coverage: 61 rows
 
 WITH
-uom_conversion_view AS (
-  SELECT
-    base.vbeln,
-    base.posnr,
-    base.matnr,
-    base.vrkme,
-    base.meins,
-    base.bmeng,
-    base.netpr,
-    marm.umrez,
-    marm.umren,
-    CASE
-      WHEN base.vrkme = base.meins THEN base.bmeng
-      WHEN marm.umren = 0 OR marm.umren IS NULL THEN base.bmeng
-      ELSE base.bmeng * (marm.umrez / marm.umren)
-    END AS qty_primary_uom,
-    CASE
-      WHEN base.vrkme = base.meins THEN base.netpr
-      WHEN marm.umrez = 0 OR marm.umrez IS NULL THEN base.netpr
-      ELSE base.netpr * (marm.umren / marm.umrez)
-    END AS price_primary_uom
-  FROM vbep base
-  LEFT JOIN marm marm
-    ON marm.matnr = base.matnr
-   AND marm.meinh = base.vrkme
+uom_conversion AS (
+  select 
+     vbeln,
+     posnr,
+     etenr,
+     edatu,
+     bmeng,
+     order_qty,
+     wavwr,
+     company_currency_derive,
+     vbap.kwmeng,
+     coalesce(case 
+                when uom_check = 'yes' 
+                then if(netpr=0,netwr/kwmeng,(netpr/kpein))
+                else if(netpr=0,netwr/kwmeng,(netpr/kpein)/conversion_factor)
+               end,0) as price_uom
+from uom_conversion_view
 ),
 invoice_dt_lookup AS (
   SELECT
@@ -50,48 +42,56 @@ invoice_dt_lookup AS (
   WHERE vbfa.vbtyp_n = 'M'
   GROUP BY vbfa.vbelv, vbfa.posnv
 ),
+uom_conversion_view AS (
+  SELECT
+    CASE WHEN vbep.vrkme = vbap.meins THEN vbep.bmeng ELSE (marm.umrez / marm.umren) * vbep.bmeng END AS order_qty,
+    CASE WHEN uom_check = 'yes' THEN IF(netpr=0, netwr/order_qty, (netpr/kpein)) ELSE IF(netpr=0, netwr/order_qty, (netpr/kpein)/conversion_factor) END AS price_uom
+  FROM vbep vbep
+  LEFT JOIN marm marm ON vbep.vrkme = marm.meinh
+),
 currency_conversion AS (
   SELECT
-    m.WAERS AS currency_cd,
-    IF(m.WAERS = 'RMB', 'CNY', m.WAERS) AS converted_currency_cd
-  FROM Move to Vendor/Customer Master m
-),
-uom_conversion AS (
-  SELECT
-    CASE WHEN m.bmeng IS NOT NULL THEN m.bmeng ELSE m.wmeng END AS converted_uom
-  FROM Move to Vendor/Customer Master m
+    CASE WHEN trim(vbap.waerk) = trim(t001.waers) THEN IF(trim(vbap.waerk)='JPY', price_uom*100*COALESCE(vbkd.kursk, vbkd_derived.kursk), price_uom*COALESCE(vbkd.kursk, vbkd_derived.kursk))*(tcurf.tfact/tcurf.ffact) ELSE (price_uom*COALESCE(vbkd.kursk, vbkd_derived.kursk))*(tcurf.tfact/tcurf.ffact) END AS unit_price_company_currency
+  FROM vbap vbap
+  LEFT JOIN t001 t001 ON vbap.bukrs = t001.bukrs
+  LEFT JOIN tcurf tcurf ON vbap.waerk = tcurf.ffact AND t001.waers = tcurf.tfact
 )
 
 SELECT
-  CAST(NULL AS string) AS co_key,
+  CONCAT_WS('|', gbl, g_order_company_cd) AS co_key,
   CAST(NULL AS string) AS g_allocated_qty_primary_uom,
   CAST(NULL AS string) AS g_availability_dt_yyyymmdd,
-  m.KUNNR AS g_bill_to_customer_nbr,
-  CAST(NULL AS string) AS g_cancel_dt_yyyymmdd,
+  vbap.kunnr AS g_bill_to_customer_nbr,
+  CASE WHEN vbap.aedat = '0' THEN vbap.erdat ELSE vbap.aedat END AS g_cancel_dt_yyyymmdd,
   CAST(NULL AS string) AS g_cancel_qty_primary_uom,
-  m.WAERS AS g_company_currency_cd,
-  m.kdmat AS g_customer_item_nbr,
-  m.POSEX AS g_customer_po_line_nbr,
-  m.bstkd AS g_customer_po_nbr,
-  m.bsark AS g_customer_po_type,
-  case when COALESCE(request_date.LAND1, request_date_posnr0.LAND1) not in('US','CA') then COALESCE(request_date.vdatu, request_date_posnr0.vbdatu) when COALESCE(request_date.LAND1, request_date_posnr0.LAND1) in('US','CA') then trim(vbep.request_dt) else vbep.edatu end AS g_customer_request_dt_yyyymmdd,
-  m.ETENR AS g_delivery_schedule_line_nbr,
-  CAST(NULL AS string) AS g_flag_consignment_order,
-  m.UEPOS AS g_flag_has_parent,
-  m.SOBKZ AS g_flag_inventory_fully_allocated,
-  m.UEPOS AS g_flag_is_parent,
-  CAST(NULL AS string) AS g_flag_is_transfer_order,
-  case when trim(vbak.vbtyp) in ('A', 'B', 'D') then 'no' when trim(VBUP.LFSTA) in ('A', 'B', 'C') and MARA.MTART in ('DIEN', 'NSTK', 'SERV', 'ZSRV') then 'no' when trim(VBUP.LFSTA) = '' or VBUP.LFSTA is NULL then 'no' else 'yes' end AS g_flag_material_transacted,
-  CAST(NULL AS string) AS g_flag_on_hold,
-  CAST(NULL AS string) AS g_flag_open_to_ship,
-  m.VBTYP AS g_flag_return,
-  case when coalesce(open_qty_primary_uom, 0) = 0 then 'no' when trim(vbak.vbtyp) in ('A', 'B', 'D') then 'no' when trim(tvap.prsfd) = 'X' then 'yes' else 'no' end AS g_flag_revenue_recognition,
-  m.inco1 AS g_inco_terms,
-  m.erdat AS g_invoice_dt_yyyymmdd,
-  m.MATNR AS g_item_nbr,
-  CAST(NULL AS string) AS g_last_actual_ship_dt_yyyymmdd,
-  case when upper(trim(vbup.gbsta)) = 'A' then 'NOT YET PROCESSED' when upper(trim(vbup.gbsta)) = 'B' then 'PARTIALLY PROCESSED' when upper(trim(vbup.gbsta)) = 'C' then 'COMPLETELY PROCESSED' else 'NOT RELEVANT' end AS g_line_status_cd,
-  case when order_type = 'DEMO' AND ship_lines.sttrg = '7' then 0 when tvap.fkrel in ('A','H','J','K','M','O','P','Q','R','T','U','V','W') then round((coalesce(order_qty_primary_uom,0) - coalesce(lst.shipped_qty,0)),4) when trim(tvap.fkrel) = '' then 0 else round((coalesce(order_qty_primary_uom,0) - (case when lst.shipped_qty <> 0 then lst.shipped_qty when lst.shipped_qty = 0 and inv.invoice_qty <> 0 then inv.invoice_qty else 0 end)), 0) end - coalesce(cancel_qty_primary_uom,0) AS g_open_qty_primary_uom,
+  CASE WHEN t001.waers = 'RMB' THEN 'CNY' ELSE t001.waers END AS g_company_currency_cd,
+  vbap.kdmat AS g_customer_item_nbr,
+  'NULL' AS g_customer_po_line_nbr,
+  vbkd.bstkd AS g_customer_po_nbr,
+  vbkd.bsark AS g_customer_po_type,
+  case when COALESCE(request_date.LAND1, request_date_posnr0.LAND1) not in('US','CA') then COALESCE(request_date.vdatu, request_date_posnr0.vbdatu) 
+when COALESCE(request_date.LAND1, request_date_posnr0.LAND1) in('US','CA') then trim(vbep.request_dt) 
+else vbep.edatu 
+end as original_customer_request_dt_yyyymmdd
+
+For request_date and request_date_posnr0 refer Join Condiions and CTE Sheet,
+  vbep.etenr AS g_delivery_schedule_line_nbr,
+  CASE WHEN vbap.pstyv IN ('KBN', 'KEN', 'KAN', 'KRN') THEN 'yes' ELSE 'no' END AS g_flag_consignment_order,
+  CASE WHEN vbap.uepos IS NOT NULL AND vbap.uepos <> '0' THEN 'yes' ELSE 'no' END AS g_flag_has_parent,
+  CAST(NULL AS STRING) AS g_flag_inventory_fully_allocated,
+  CAST(NULL AS STRING) AS g_flag_is_parent,
+  CAST(NULL AS STRING) AS g_flag_is_transfer_order,
+  CAST(NULL AS STRING) AS g_flag_material_transacted,
+  CAST(NULL AS STRING) AS g_flag_on_hold,
+  CAST(NULL AS STRING) AS g_flag_open_to_ship,
+  CAST(NULL AS STRING) AS g_flag_return,
+  CAST(NULL AS STRING) AS g_flag_revenue_recognition,
+  CAST(NULL AS STRING) AS g_inco_terms,
+  CAST(NULL AS STRING) AS g_invoice_dt_yyyymmdd,
+  CAST(NULL AS STRING) AS g_item_nbr,
+  CAST(NULL AS STRING) AS g_last_actual_ship_dt_yyyymmdd,
+  CAST(NULL AS STRING) AS g_line_status_cd,
+  CAST(NULL AS STRING) AS g_open_qty_primary_uom,
   CAST(NULL AS STRING) AS g_order_category,
   CAST(NULL AS STRING) AS g_order_company_cd,
   CAST(NULL AS STRING) AS g_order_currency_cd,
@@ -124,5 +124,6 @@ SELECT
   CAST(NULL AS STRING) AS sls_ord_key,
   CAST(NULL AS STRING) AS sls_ord_sched_key,
   CAST(NULL AS STRING) AS flag_is_blanket
-FROM Move to Vendor/Customer Master m
-LEFT JOIN mara ma ON m.matnr = ma.matnr
+FROM vbap vbap
+LEFT JOIN vbep vbep ON vbap.vbeln = vbep.vbeln AND vbap.posnr = vbep.posnr
+LEFT JOIN t001 t001 ON vbap.bukrs = t001.bukrs
