@@ -2,50 +2,99 @@
 -- Generated for: SCRUM-64
 -- Universal Plan Schema generation
 --
--- Query 1: d_buyer_transformation
+-- Query 1: d_gl_acct_transformation
 --   Pattern: dimension_flat
--- Query 2: d_product_transformation
+-- Query 2: d_company_transformation
 --   Pattern: dimension_flat
--- Query 3: d_company_transformation
+-- Query 3: d_product_transformation
 --   Pattern: dimension_flat
 -- Query 4: d_org_unit_transformation
 --   Pattern: dimension_flat
--- Query 5: f_po_receipt_transformation
+-- Query 5: d_buyer_transformation
+--   Pattern: dimension_flat
+-- Query 6: d_supplier_transformation
+--   Pattern: dimension_flat
+-- Query 7: d_product_plant_transformation
+--   Pattern: dimension_flat
+-- Query 8: f_po_receipt_transformation
 --   Pattern: fact_multi_scenario
--- Query 6: d_gl_acct_transformation
---   Pattern: dimension_flat
--- Query 7: d_supplier_transformation
---   Pattern: dimension_flat
--- Query 8: d_product_plant_transformation
---   Pattern: dimension_flat
 -- Query 9: f_purchase_order_transformation
 --   Pattern: fact_union_dedup
 -- Query 10: f_po_recpt_txn_transformation
---   Pattern: generic
+--   Pattern: fact_join_enriched
 -- Query 11: f_supplier_invoice_transformation
 --   Pattern: fact_union_dedup
 
 -- =============================
--- d_buyer_transformation
+-- d_gl_acct_transformation
 -- =============================
 /**************************************************************************
-Generated plan for d_buyer dimension table
+Generated plan for d_gl_acct dimension table transformation.
 **************************************************************************/
 
--- Query: d_buyer_transformation
+-- Query: d_gl_acct_transformation
 -- Pattern: dimension_flat
--- Coverage: 3 rows
+-- Coverage: 16 rows
 
 SELECT
-  sap.cee_id AS buyer_cd,
-  sap.tee_id AS buyer_nm,
-  'byd_brsbn' AS src_sys_cd
-FROM sap_dim_buyer sap
+  dga.ccompany_uuid AS co_cd,
+  sdga.tcompany_uuid AS co_nm,
+  coalesce(ska1.ktopl, CAST(NULL AS string)) AS coa_id,
+  sdga.CCOST_CTR_UUID AS cost_center_branch_cd,
+  sdga.TCOST_CTR_UUID AS cost_center_branch_nm,
+  CAST(NULL AS string) AS curncy_cd,
+  CAST(NULL AS string) AS curncy_nm,
+  CAST(NULL AS string) AS dtl_lvl_nbr,
+  dga.cglacct AS gl_acct_id,
+  CAST(NULL AS STRING) AS gl_acct_nm,
+  CAST(NULL AS string) AS object_acct_cd,
+  CAST(NULL AS string) AS object_acct_cost_type_cd,
+  CAST(NULL AS string) AS object_acct_subsdry_nm,
+  CAST(NULL AS string) AS object_acct_type_cd,
+  'byd_brsbn' AS src_sys_cd,
+  CAST(NULL AS string) AS subsdry_cd
+FROM dim_gl_acct dga
+LEFT JOIN sap_dim_gl_acct sdga ON dga.ccompany_uuid = sdga.tcompany_uuid
+
+-- =============================
+-- d_company_transformation
+-- =============================
+/**************************************************************************
+Generated plan for d_company dimension table
+**************************************************************************/
+
+-- Query: d_company_transformation
+-- Pattern: dimension_flat
+-- Coverage: 19 rows
+
+SELECT
+  site.ccity_name AS city_nm,
+  sap.ccntry_code AS cntry_cd,
+  sap.tcntry_code AS cntry_nm,
+  sap.cco_id AS co_cd,
+  'AUD' AS co_curncy_cd,
+  'Australian Dollar' AS co_curncy_nm,
+  sap.tco_id AS co_nm,
+  CAST(NULL AS string) AS gbl_rgn_cd,
+  CAST(NULL AS string) AS gbl_rgn_nm,
+  (CASE WHEN sap.bukrs IN ('0070', '5000', '1800', '1220', '1000', '0040', '2070', '2000', '2010', '1900', '1530', '1287', '1310', '1030', '1200', '1600', '2030', '0020', '0010', '0110', '2930', '3000', '1520', '1710', '1120', '1150', '2010', '2080', '2040', '1170', '2900', '2090') OR sap.bukrs BETWEEN '1400' AND '1480' THEN 'AIG' ELSE 'NON_AIG' END) AS group_nm,
+  'PSBIOLC' AS hfm_entity_cd,
+  CAST(NULL AS string) AS lang_cd,
+  CAST(NULL AS string) AS lang_iso_cd,
+  CAST(NULL AS string) AS lang_nm,
+  CAST(NULL AS string) AS rgn_cd,
+  CAST(NULL AS string) AS rgn_nm,
+  'byd_brsbn' AS src_sys_cd,
+  CAST(NULL AS string) AS st_prov_cd,
+  CAST(NULL AS string) AS st_prov_nm
+FROM sap_dim_company sap
+LEFT JOIN sap_dim_org_unit_site site ON site.cparty_id = 4192
 
 -- =============================
 -- d_product_transformation
 -- =============================
 /**************************************************************************
+Generated SQL for d_product dimension table
 Generated plan for d_product dimension table
 **************************************************************************/
 
@@ -152,7 +201,7 @@ SELECT
   CAST(NULL AS string) AS purch_val_nm,
   CAST(NULL AS string) AS rd_proj_cd,
   CAST(NULL AS string) AS rd_proj_nm,
-  IF((MARA.KZREV)= ,N,Y) as rev_lvl_,
+  IF((MARA.KZREV)= ,N,Y) AS rev_lvl_assgn_flg,
   CAST(NULL AS int) AS sell_days,
   CAST(NULL AS int) AS sheets_cnt,
   CAST(NULL AS string) AS ship_cond_cd,
@@ -197,44 +246,10 @@ FROM sap_dim_product_1 sap
 LEFT JOIN sap_dim_org_unit_site site ON sap.org_unit_id = site.org_unit_id
 
 -- =============================
--- d_company_transformation
--- =============================
-/**************************************************************************
-Generated plan for d_company dimension table
-**************************************************************************/
-
--- Query: d_company_transformation
--- Pattern: dimension_flat
--- Coverage: 19 rows
-
-SELECT
-  site.ccity_name AS city_nm,
-  sap.ccntry_code AS cntry_cd,
-  sap.tcntry_code AS cntry_nm,
-  sap.cco_id AS co_cd,
-  'AUD' AS co_curncy_cd,
-  'Australian Dollar' AS co_curncy_nm,
-  sap.tco_id AS co_nm,
-  CAST(NULL AS string) AS gbl_rgn_cd,
-  CAST(NULL AS string) AS gbl_rgn_nm,
-  (CASE WHEN sap.bukrs IN ('0070', '5000', '1800', '1220', '1000', '0040', '2070', '2000', '2010', '1900', '1530', '1287', '1310', '1030', '1200', '1600', '2030', '0020', '0010', '0110', '2930', '3000', '1520', '1710', '1120', '1150', '2010', '2080', '2040', '1170', '2900', '2090') OR sap.bukrs BETWEEN '1400' AND '1480' THEN 'AIG' ELSE 'NON_AIG' END) AS group_nm,
-  'PSBIOLC' AS hfm_entity_cd,
-  CAST(NULL AS string) AS lang_cd,
-  CAST(NULL AS string) AS lang_iso_cd,
-  CAST(NULL AS string) AS lang_nm,
-  CAST(NULL AS string) AS rgn_cd,
-  CAST(NULL AS string) AS rgn_nm,
-  'byd_brsbn' AS src_sys_cd,
-  CAST(NULL AS string) AS st_prov_cd,
-  CAST(NULL AS string) AS st_prov_nm
-FROM sap_dim_company sap
-LEFT JOIN sap_dim_org_unit_site site ON site.cparty_id = 4192
-
--- =============================
 -- d_org_unit_transformation
 -- =============================
 /**************************************************************************
-Generated plan for d_org_unit dimension table
+Generated plan for d_org_unit dimension table.
 **************************************************************************/
 
 -- Query: d_org_unit_transformation
@@ -271,74 +286,21 @@ SELECT
 FROM sap_dim_org_unit_site sap
 
 -- =============================
--- f_po_receipt_transformation
+-- d_buyer_transformation
 -- =============================
 /**************************************************************************
-Generated plan for f_po_receipt with multiple scenarios
+Generated plan for d_buyer dimension table.
 **************************************************************************/
 
--- Query: f_po_receipt_transformation
--- Pattern: fact_multi_scenario
--- Coverage: 66 rows
-
-WITH
-currency_conversion AS (
-  SELECT
-    sap.KCRC_DLVD_AMT * cast(coalesce(co_curr_mth.co_pmar_rt, 1) as double) AS recpt_co_pmar_amt,
-    sap.KCDLVD_AMT * cast(coalesce(txn_curr_mth.txn_pmar_rt, 1) as double) AS recpt_pmar_amt
-  FROM sap_fct_po_receipt sap
-  LEFT JOIN (select curr_mnth.pmar_rt as co_pmar_rt, curr_mnth.yr_mth_nbr, curr_mnth.from_curncy_cd from d_curncy_mth_rt curr_mnth where upper(to_curncy_cd) = 'USD') co_curr_mth ON co_curr_mth.yr_mth_nbr = d_date.fscl_yr_prd_nbr
-  LEFT JOIN (select curr_mnth.pmar_rt as txn_pmar_rt, curr_mnth.yr_mth_nbr, curr_mnth.from_curncy_cd, curr_mnth.to_curncy_cd from d_curncy_mth_rt curr_mnth where trim(upper(to_curncy_cd)) = 'USD') txn_curr_mth ON txn_curr_mth.yr_mth_nbr = d_date.fscl_yr_prd_nbr
-),
-sto AS (
-  SELECT
-    sap.CITM_TYPE AS spend_type_cd,
-    CASE WHEN sap.CITM_TYPE = 18 THEN 'Direct' ELSE 'Indirect' END AS spend_type_cd_logic
-  FROM sap_fct_po_receipt sap
-),
-uom_conversion AS (
-  SELECT
-    sap.CBU_QNT_UNIT AS base_uom,
-    CAST(NULL AS STRING) AS base_uom_text
-  FROM sap_fct_po_receipt sap
-)
-
-SELECT * FROM currency_conversion
-UNION ALL
-SELECT * FROM sto
-UNION ALL
-SELECT * FROM uom_conversion
-
--- =============================
--- d_gl_acct_transformation
--- =============================
-/**************************************************************************
-Generated plan for d_gl_acct dimension table.
-**************************************************************************/
-
--- Query: d_gl_acct_transformation
+-- Query: d_buyer_transformation
 -- Pattern: dimension_flat
--- Coverage: 16 rows
+-- Coverage: 3 rows
 
 SELECT
-  dim.ccompany_uuid AS co_cd,
-  sap.tcompany_uuid AS co_nm,
-  coalesce(ska1.ktopl, CAST(NULL AS string)) AS coa_id,
-  sap.CCOST_CTR_UUID AS cost_center_branch_cd,
-  sap.TCOST_CTR_UUID AS cost_center_branch_nm,
-  CAST(NULL AS string) AS curncy_cd,
-  CAST(NULL AS string) AS curncy_nm,
-  CAST(NULL AS string) AS dtl_lvl_nbr,
-  dim.cglacct AS gl_acct_id,
-  CAST(NULL AS STRING) AS gl_acct_nm,
-  CAST(NULL AS string) AS object_acct_cd,
-  CAST(NULL AS string) AS object_acct_cost_type_cd,
-  CAST(NULL AS string) AS object_acct_subsdry_nm,
-  CAST(NULL AS string) AS object_acct_type_cd,
-  'byd_brsbn' AS src_sys_cd,
-  CAST(NULL AS string) AS subsdry_cd
-FROM dim_gl_acct dim
-LEFT JOIN sap_dim_gl_acct sap ON dim.ccompany_uuid = sap.tcompany_uuid
+  sap_dim_buyer.cee_id AS buyer_cd,
+  sap_dim_buyer.tee_id AS buyer_nm,
+  'byd_brsbn' AS src_sys_cd
+FROM sap_dim_buyer sap_dim_buyer
 
 -- =============================
 -- d_supplier_transformation
@@ -361,7 +323,7 @@ SELECT
   CAST(NULL AS string) AS contract_id,
   CAST(NULL AS string) AS contract_stat_cd,
   CAST(NULL AS string) AS contract_type_nm,
-  COALESCE(lfa1.KRAUS, ?) AS dnb_co_nbr,
+  COALESCE(lfa1.KRAUS, 'NA') AS dnb_co_nbr,
   CAST(NULL AS string) AS frt_terms_cd,
   CAST(NULL AS string) AS frt_terms_nm,
   dim_supplier.CINCTM_CODE AS inco_terms_cd,
@@ -379,15 +341,15 @@ SELECT
   CAST(NULL AS string) AS status_cd,
   if(lower(trim(dim_supplier.cpur_block_ind)) = 'active' ,'N','Y') as suplr_active_flg,
   dim_supplier.CFRMTD_PSTL_ADDR AS suplr_addr_line_1,
-  CAST(NULL AS string) AS suplr_addr_line_2,
-  CAST(NULL AS string) AS suplr_addr_line_3,
-  CAST(NULL AS string) AS suplr_addr_line_4,
+  dim_supplier.Address AS suplr_addr_line_2,
+  dim_supplier.Address AS suplr_addr_line_3,
+  dim_supplier.Address AS suplr_addr_line_4,
   CAST(NULL AS string) AS suplr_assgn_grp_cd,
   CAST(NULL AS string) AS suplr_assgn_grp_nm,
   CAST(NULL AS STRING) AS suplr_city_nm,
   CAST(NULL AS string) AS suplr_class_cd,
   CAST(NULL AS string) AS suplr_class_nm,
-  COALESCE(lfa1.LAND1, ?) AS suplr_cntry_cd,
+  COALESCE(lfa1.LAND1, 'NA') AS suplr_cntry_cd,
   dim_supplier.TCOUNTRY_CODE AS suplr_cntry_nm,
   CAST(NULL AS string) AS cust_svc_email_txt_suplr_contact_email_addr_cust_serv,
   CAST(NULL AS string) AS cust_svc_contact_nm_suplr_contact_nm_cust_serv,
@@ -396,10 +358,10 @@ SELECT
   CAST(NULL AS string) AS suplr_dvrsty_cd,
   CAST(NULL AS string) AS suplr_dvrsty_nm,
   dim_supplier.CEMAIL_URI AS suplr_email_addr,
-  COALESCE(lfa1.LIFNR, ?) AS suplr_id,
-  COALESCE(lfa1.BRSCH, ?) AS suplr_indy_cd,
+  COALESCE(lfa1.LIFNR, 'NA') AS suplr_id,
+  COALESCE(lfa1.BRSCH, 'NA') AS suplr_indy_cd,
   CAST(NULL AS string) AS suplr_indy_nm,
-  COALESCE(lfa1.spras, ?) AS suplr_lang_cd,
+  COALESCE(lfa1.spras, 'NA') AS suplr_lang_cd,
   CAST(NULL AS string) AS suplr_lang_nm,
   dim_supplier.TBP_UUID AS suplr_nm,
   payment_data.TPAYMENT_METHOD AS paymt_type_cd_suplr_paymt_typ,
@@ -424,7 +386,7 @@ LEFT JOIN sap_dim_supplier_payment_data payment_data ON payment_data.CBP_UUID = 
 -- =============================
 /**************************************************************************
 Generated plan for d_product_plant dimension table.
-Generated plan for d_product_plant dimension table
+Generated SQL for d_product_plant dimension table
 **************************************************************************/
 
 -- Query: d_product_plant_transformation
@@ -559,7 +521,7 @@ end ) AS plant_mtl_stat_dt,
   CAST(NULL AS double) AS plant_to_plant_stk_in_transfer,
   CAST(NULL AS int) AS post_prd,
   CAST(NULL AS int) AS post_prd_fscl_yr,
-  (case when marc.insmk is null or marc.insmk = '' then 'N' else 'Y' end) AS post_to_inspn_stk_flg,
+  (CASE WHEN marc.insmk IS NULL OR marc.insmk = '' THEN 'N' ELSE 'Y' END) AS post_to_inspn_stk_flg,
   CAST(NULL AS string) AS ppc_plang_cal_cd,
   CAST(NULL AS string) AS ppc_plang_cal_nm,
   CAST(NULL AS string) AS prcmt_qual_mgmt_cd,
@@ -592,7 +554,7 @@ end ) AS plant_mtl_stat_dt,
   CAST(NULL AS decimal(38,6)) AS recpt_proc_days,
   CAST(NULL AS decimal(38,6)) AS recu_inspn_intvl,
   CAST(NULL AS decimal(38,6)) AS reord_point_qty,
-  (case when marc.sauft is null or marc.sauft = ' ' then 'N' else 'Y' end) AS rept_mfg_flg,
+  (CASE WHEN marc.sauft IS NULL OR marc.sauft = ' ' THEN 'N' ELSE 'Y' END) AS rept_mfg_flg,
   CAST(NULL AS string) AS rept_mfg_profl_cd,
   CAST(NULL AS string) AS rept_mfg_profl_nm,
   CAST(NULL AS string) AS req_grp_ind,
@@ -613,7 +575,7 @@ end ) AS plant_mtl_stat_dt,
   CAST(NULL AS string) AS special_prcmt_type_cd,
   CAST(NULL AS string) AS special_prcmt_type_nm,
   CAST(NULL AS string) AS splitting_ind,
-  (case when marc.kordb is null or marc.kordb = ' ' then 'N' else 'Y' end) AS src_list_req_flg,
+  (CASE WHEN marc.kordb IS NULL OR marc.kordb = ' ' THEN 'N' ELSE 'Y' END) AS src_list_req_flg,
   'byd_brsbn' AS src_sys_cd,
   sap_dim_master.KCVALPCOMP AS std_cost_amt,
   CAST(NULL AS decimal(38,2)) AS suplr_lead_time,
@@ -622,22 +584,63 @@ end ) AS plant_mtl_stat_dt,
   CAST(NULL AS decimal(38,6)) AS transit_stk_qty,
   CAST(NULL AS decimal(38,6)) AS ttl_repln_lead_time_days,
   CAST(NULL AS decimal(38,6)) AS under_delvr_tol_lmt,
-  (case when marc.ueetk is null or marc.ueetk = ' ' then 'N' else 'Y' end) AS unlmted_over_delvr_flg,
+  (CASE WHEN marc.ueetk IS NULL OR marc.ueetk = ' ' THEN 'N' ELSE 'Y' END) AS unlmted_over_delvr_flg,
   CAST(NULL AS string) AS val_cat_cd,
   CAST(NULL AS string) AS val_cat_nm,
   CAST(NULL AS string) AS val_strm_cd,
   CAST(NULL AS string) AS val_strm_nm,
   CAST(NULL AS string) AS var_cd,
   CAST(NULL AS string) AS var_nm,
-  (case when marc.verkz is null or marc.verkz = '' then 'N' else 'Y' end) AS ver_flg
+  (CASE WHEN marc.verkz IS NULL OR marc.verkz = '' THEN 'N' ELSE 'Y' END) AS ver_flg
 FROM sap_dim_product_plant sap
+
+-- =============================
+-- f_po_receipt_transformation
+-- =============================
+/**************************************************************************
+This plan processes the f_po_receipt table with multiple scenarios detected.
+Scenarios include currency conversion, STO, and UOM conversion.
+**************************************************************************/
+
+-- Query: f_po_receipt_transformation
+-- Pattern: fact_multi_scenario
+-- Coverage: 66 rows
+
+WITH
+currency_conversion AS (
+  SELECT
+    sap.KCRC_DLVD_AMT * cast(coalesce(co_curr_mth.co_pmar_rt, 1) as double) AS recpt_co_pmar_amt,
+    sap.KCDLVD_AMT * cast(coalesce(txn_curr_mth.txn_pmar_rt, 1) as double) AS recpt_pmar_amt
+  FROM sap_fct_po_receipt sap
+  LEFT JOIN (select curr_mnth.pmar_rt as co_pmar_rt, curr_mnth.yr_mth_nbr, curr_mnth.from_curncy_cd from d_curncy_mth_rt curr_mnth where upper(to_curncy_cd) = 'USD') co_curr_mth ON co_curr_mth.yr_mth_nbr = d_date.fscl_yr_prd_nbr
+  LEFT JOIN (select curr_mnth.pmar_rt as txn_pmar_rt, curr_mnth.yr_mth_nbr, curr_mnth.from_curncy_cd, curr_mnth.to_curncy_cd from d_curncy_mth_rt curr_mnth where trim(upper(to_curncy_cd)) = 'USD') txn_curr_mth ON txn_curr_mth.yr_mth_nbr = d_date.fscl_yr_prd_nbr
+),
+sto AS (
+  SELECT
+    sap.CITM_TYPE AS sto_type,
+    CASE WHEN sap.CITM_TYPE = '18' THEN 'Direct' ELSE 'Indirect' END AS spend_type_cd
+  FROM sap_fct_po_receipt sap
+),
+uom_conversion AS (
+  SELECT
+    sap.CBU_QNT_UNIT AS base_uom,
+    sap.TBU_QNT_UNIT AS base_uom_text,
+    sap.CQUANTITY_UNIT AS txn_uom,
+    sap.TQUANTITY_UNIT AS txn_uom_text
+  FROM sap_fct_po_receipt sap
+)
+
+SELECT * FROM currency_conversion
+UNION ALL
+SELECT * FROM sto
+UNION ALL
+SELECT * FROM uom_conversion
 
 -- =============================
 -- f_purchase_order_transformation
 -- =============================
 /**************************************************************************
-This plan generates the f_purchase_order fact table.
-It uses a union of current and historical data with deduplication.
+Generated SQL for f_purchase_order with union and deduplication logic.
 Generated plan for f_purchase_order with union and deduplication logic.
 **************************************************************************/
 
@@ -659,20 +662,6 @@ po_unified AS (
 ),
 po_dedup AS (
   SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY CPO_ID, CITM_ID ORDER BY src_priority) AS rn FROM po_unified) x WHERE rn = 1
-),
-purchase_order_unified AS (
-  SELECT
-    *,
-    1 as src_priority
-  FROM sap_fct_purchase_order curr
-  UNION ALL
-  SELECT
-    *,
-    2 as src_priority
-  FROM fct_purchase_order_history hist
-),
-purchase_order_dedup AS (
-  SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY po_nbr ORDER BY src_priority) AS rn FROM purchase_order_unified) x WHERE rn = 1
 )
 
 SELECT
@@ -686,17 +675,17 @@ SELECT
   po.CEMPL_RESP AS buyer_cd,
   po.TEMPL_RESP AS buyer_name,
   po.CBUYER AS co_cd,
-  IF(t001.waers = 'RMB', 'CNY', t001.waers) AS co_curncy_cd,
+  if(t001.waers='RMB','CNY',t001.waers) AS co_curncy_cd,
   po.TBUYER AS co_name,
   CAST(NULL AS string) AS coi,
   CAST(NULL AS string) AS contract_end_date,
-  IF(ekko.BSTYP IN ('K', 'L'), 'Y', 'N') AS contract_flag,
+  if(ekko.BSTYP in ('K', 'L'),'Y','N') AS contract_flag,
   CAST(NULL AS string) AS contract_start_date,
-  (CASE WHEN ekko.BSTYP = 'K' THEN 'Contract' WHEN ekko.BSTYP = 'L' THEN 'Sched Agr' ELSE 'NA' END) AS contract_type,
+  (case when ekko.BSTYP = 'K' then 'Contract' when ekko.BSTYP = 'L' then 'Sched Agr' else 'NA' end) AS contract_type,
   CAST(NULL AS string) AS coo,
   po.CCOST_CENTRE AS cost_centre_cd,
   po.TCOST_CENTRE AS cost_centre_nm,
-  IF(po.CITM_DLV_ST_01 = '1' OR po.CITM_DLV_ST_01 = '2', 'N', IF(po.CITM_DLV_ST_01 = '3', 'Y', NULL)) AS delvr_cmplt_flg,
+  if(po.CITM_DLV_ST_01 IN ('1', '2'), 'N', if(po.CITM_DLV_ST_01 = '3', 'Y', NULL)) AS delvr_cmplt_flg,
   CAST(NULL AS string) AS dept_cd,
   'DSD' AS div_cd,
   CAST(NULL AS double) AS dock_qty,
@@ -713,7 +702,7 @@ SELECT
   po.TGL_ACC_ALIAS_CD AS gl_acct_nm,
   CAST(NULL AS string) AS good_receipt_ind,
   po.CLFCYCLE_ST AS header_status_cd,
-  IF(po.CLFCYCLE_ST = '10', 'Closed', IF(po.CLFCYCLE_ST = '8', 'Canceled', 'Open')) AS header_status_nm,
+  if(po.CLFCYCLE_ST = '10', 'Closed', if(po.CLFCYCLE_ST = '8', 'Canceled', 'Open')) AS header_status_nm,
   'PSBIOLC' AS hfm_entity,
   po.CINC_CLASS_CD AS inco_terms_cd,
   po.TINC_CLASS_CD AS inco_terms_nm,
@@ -725,9 +714,9 @@ SELECT
   if(cast(if(EKPO.WEPOS = ' ', (eket.menge-eket.ameng) ,(eket.menge - eket.wemng)) as double) = 0 or (ekpo.elikz = 'X') ,'Closed','Open') AS item_status_nm,
   CAST(NULL AS string) AS job_no,
   CAST(NULL AS string) AS last_recpt_dt,
-  IF(lcr_lkup.lcr_flg IS NOT NULL, lcr_lkup.lcr_flg, 'N') AS lcr_flag,
-  IF(lcr_lkup.lcr_reg IS NOT NULL, lcr_lkup.lcr_reg, 'NA') AS lcr_region,
-  CAST(0 AS decimal(3,0)) AS line_seq,
+  if(lcr_lkup.lcr_flg is not null,lcr_lkup.lcr_flg,'N') AS lcr_flag,
+  if(lcr_lkup.lcr_reg is not null,lcr_lkup.lcr_reg,'NA') AS lcr_region,
+  cast(0 as decimal(3,0)) AS line_seq,
   CAST(NULL AS string) AS nature,
   CAST(NULL AS string) AS nature_nm,
   po.KCQUANTITY - po.KCDLVD_QTY AS open_qty,
@@ -738,7 +727,7 @@ SELECT
   if(ekpo.knttp = 'M', 'Y', 'N') AS pass_through_field,
   if(ekpo.knttp = 'M',concat(ekkn.vbeln,'-',ekkn.vbelp),'NA') AS pass_through_line,
   if(ekpo.pstyp='2', coalesce(PAYMENT_COMP_FLG.LKUP_VAL_03,'N') ,coalesce(PAYMENT_COMP_FLG.LKUP_VAL_02,'N')) AS payment_compliance_flg,
-  COALESCE(lfb1.zterm, ekko.zterm) AS paymt_terms_cd,
+  coalesce(lfb1.zterm,ekko.zterm) AS paymt_terms_cd,
   po.TCASHDIS_TERMSCD AS paymt_terms_desc,
   po.CITM_DLV_EDDT AS plan_delvry_dt,
   CAST(NULL AS string) AS planner_cd,
@@ -758,8 +747,8 @@ SELECT
   cast(coalesce(eket.menge,0) as double) AS po_qty,
   sap_dim_org_unit_site.CCITY_NAME AS ship_to_city_nm,
   sap_dim_org_unit_site.CCNTRY_CODE AS ship_to_cntry_cd,
-  po.CBUYER AS ship_to_entity_type_nm,
-  po.TBUYER AS po_ship_to_name,
+  CAST(NULL AS string) AS ship_to_entity_type_nm,
+  CAST(NULL AS string) AS po_ship_to_name,
   po.CPROCESS_TYPE AS po_type_cd,
   po.TPROCESS_TYPE AS po_type_nm,
   po.cquantity_unit AS po_uom,
@@ -770,22 +759,22 @@ SELECT
   po.TQUANTITY_UNIT AS purch_uom_text,
   CAST(NULL AS string) AS ref_no,
   po.CORDERED_DATE AS release_dt,
-  LTRIM(RTRIM(site_hrm.lkup_val_01)) AS reporting_site,
+  ltrim(rtrim(site_hrm.lkup_val_01)) AS reporting_site,
   CAST(NULL AS double) AS returned_qty,
   CAST(NULL AS string) AS sec_supp_cd,
   po.CRECEIVING_SITE AS site_id,
-  IF(po.CITM_TYPE = '18', 'Direct', 'Indirect') AS spend_typ_cd,
+  if(po.CITM_TYPE='18', 'Direct', 'Indirect') AS spend_typ_cd,
   CAST(NULL AS string) AS src_crt_by,
   CAST(NULL AS string) AS src_crt_ts,
   'byd_brsbn' AS src_sys_cd,
-  CAST(NULL AS STRING) AS stk_unit_price,
+  dim_master.kcvalpcomp AS stk_unit_price,
   CAST(NULL AS double) AS stock_qty,
   CAST(NULL AS string) AS suplr_cat_no,
   po.CITM_DLV_EDDT AS suplr_confrm_dt,
   po.CITM_DLV_EDDT AS suplr_promise_delv_dt,
   po.CSELLER AS supplier_cd,
   po.TSELLER AS supplier_name,
-  IF(sap_dim_Supplier_Payment_Data.TACCT_DET_CREDITOR_GROUP_CODE IN ('Domestic, third party', 'Foreign, third party'), '3rd party supplier', 'IC supplier') AS supplier_type_cd,
+  if(sap_dim_Supplier_Payment_Data.TACCT_DET_CREDITOR_GROUP_CODE IN ('Domestic, third party', 'Foreign, third party'), '3rd party supplier', 'IC supplier') AS supplier_type_cd,
   cast(if(EKPO.WEPOS = ' ',coalesce(ekbe.recpt_qty,0), coalesce(eket.wemng,0)) as double ) AS ttl_recpt_qty,
   CAST(NULL AS double) AS txn_co_exch_rt,
   CAST(NULL AS string) AS unit,
@@ -801,26 +790,26 @@ coalesce((EKPO.BPUMZ/IF(EKPO.BPUMN=0,1,EKPO.BPUMN)),0))) as double) AS unit_prc_
   sap_fct_purchase_order.KCNET_PRC_AMT * coalesce(txn_curr_mth.po_PMAR_RT, 0) AS unit_prc_txn_pmar_amt,
   round(fct_purchase_order.KCBU_QUANTITY / fct_purchase_order.kcquantity, 2) AS uom_conv_factor,
   sap_dim_product_1.Cs1ANsD0A4BBEA40DDD66 AS vendor_mat_no,
-  if(po.cprocess_type = 'THPA', 'Y', 'N') AS vomi_flag,
+  CASE WHEN po.cprocess_type = 'THPA' THEN 'Y' ELSE 'N' END AS vomi_flag,
   CAST(NULL AS string) AS warehouse,
   CAST(NULL AS string) AS warehouse_nm
 FROM po_dedup po
-LEFT JOIN (select curr_mnth.PMAR_RT as CO_PMAR_RT, curr_mnth.CURNCY_MTH_RT_KEY, curr_mnth.YR_MTH_NBR, if(curr_mnth.FROM_CURNCY_CD='CNY','RMB',curr_mnth.FROM_CURNCY_CD) FROM_CURNCY_CD from d_curncy_mth_rt curr_mnth where TO_CURNCY_CD = 'USD') co_curr_mth ON trim(upper(co_curr_mth.YR_MTH_NBR)) = trim(upper(d_dt.fscl_yr_prd_nbr))
-LEFT JOIN (select curr_mnth.PMAR_RT as po_PMAR_RT, curr_mnth.CURNCY_MTH_RT_KEY, curr_mnth.YR_MTH_NBR, if(curr_mnth.FROM_CURNCY_CD='CNY','RMB',curr_mnth.FROM_CURNCY_CD) FROM_CURNCY_CD from d_curncy_mth_rt curr_mnth where TO_CURNCY_CD = 'USD') txn_curr_mth ON trim(upper(txn_curr_mth.YR_MTH_NBR)) = trim(upper(d_dt.fscl_yr_prd_nbr))
-LEFT JOIN (select kcvalpcomp, cmatr_int_id, row_number() over (partition by cmatr_int_id order by csupplier_id asc) as rank from dim_master where trim(upper(dim_master.csupply_planning_area)) != '5192') dim_master ON trim(upper(dim_product_plant.cproduct_id)) = trim(upper(dim_master.cmatr_int_id)) and rank = 1
+LEFT JOIN (select curr_mnth.PMAR_RT as CO_PMAR_RT, curr_mnth.CURNCY_MTH_RT_KEY,curr_mnth.YR_MTH_NBR,if(curr_mnth.FROM_CURNCY_CD='CNY','RMB',curr_mnth.FROM_CURNCY_CD)FROM_CURNCY_CD from d_curncy_mth_rt curr_mnth where TO_CURNCY_CD = 'USD') co_curr_mth ON trim(upper(co_curr_mth.YR_MTH_NBR)) = trim(upper(d_dt.fscl_yr_prd_nbr)
+LEFT JOIN (select curr_mnth.PMAR_RT as po_PMAR_RT, curr_mnth.CURNCY_MTH_RT_KEY,curr_mnth.YR_MTH_NBR, if(curr_mnth.FROM_CURNCY_CD='CNY','RMB',curr_mnth.FROM_CURNCY_CD)FROM_CURNCY_CD from d_curncy_mth_rt curr_mnth where TO_CURNCY_CD =  'USD') txn_curr_mth ON trim(upper(txn_curr_mth.YR_MTH_NBR)) = trim(upper(d_dt.fscl_yr_prd_nbr)
+LEFT JOIN (select kcvalpcomp, cmatr_int_id, row_number() over(partition by cmatr_int_id order by csupplier_id asc) as rank from dim_master where trim(upper(dim_master.csupply_planning_area)) != '5192') dim_master ON trim(upper(dim_product_plant.cproduct_id)) = trim(upper(dim_master.cmatr_int_id)
+WHERE po.CPO_ID IS NOT NULL AND po.CITM_ID IS NOT NULL AND po.po_nbr IS NOT NULL
 
 -- =============================
 -- f_po_recpt_txn_transformation
 -- =============================
 /**************************************************************************
-Generated plan for f_po_recpt_txn
-Single source table: sap_fct_po_receipt
+Generated SQL for f_po_recpt_txn transformation
 **************************************************************************/
 
 -- Query: f_po_recpt_txn_transformation
--- Pattern: generic
+-- Pattern: fact_join_enriched
 -- Coverage: 38 rows
--- WARNING: unresolved items: No primary key or unique identifier provided for po_recpt_txn_key.; No source fields or logic provided for most fields.
+-- WARNING: unresolved items: No source_field or logic provided for most fields in FIELD MAPPINGS.
 
 SELECT
   CAST(NULL AS string) AS po_recpt_txn_key,
@@ -867,7 +856,7 @@ FROM sap_fct_po_receipt sap
 -- f_supplier_invoice_transformation
 -- =============================
 /**************************************************************************
-Generated plan for f_supplier_invoice with union and deduplication logic.
+Generated SQL for f_supplier_invoice with union and deduplication logic.
 **************************************************************************/
 
 -- Query: f_supplier_invoice_transformation
@@ -939,91 +928,97 @@ SELECT
   fct.TCOST_CENTER AS cost_centre_nm,
   'DSD' AS div_cd,
   fct.CINVOICE_TYCD AS document_type,
-  null AS erp_commondity_cd,
-  null AS erp_commondity_nm,
-  CAST(NULL AS BIGINT) AS fk_orig,
-  CAST(NULL AS STRING) AS floor_stock_cd,
-  CAST(NULL AS STRING) AS fscl_yr_nbr,
-  CAST(NULL AS STRING) AS gl_acct_id,
-  CAST(NULL AS STRING) AS gl_acct_nm,
-  CAST(NULL AS STRING) AS hfm_entity,
-  CAST(NULL AS STRING) AS inv_flg,
-  CAST(NULL AS STRING) AS inv_line_desc,
-  CAST(NULL AS STRING) AS invc_apprv_id,
-  CAST(NULL AS DOUBLE) AS invc_co_amt,
-  CAST(NULL AS DOUBLE) AS invc_co_pmar_amt,
-  CAST(NULL AS STRING) AS invc_entry_dt,
-  CAST(NULL AS STRING) AS invc_entry_period,
-  CAST(NULL AS STRING) AS invc_post_dt,
-  CAST(NULL AS DOUBLE) AS invc_qty,
-  CAST(NULL AS STRING) AS invc_receipt_dt,
-  CAST(NULL AS DOUBLE) AS invc_txn_amt,
-  CAST(NULL AS DOUBLE) AS invc_txn_pmar_amt,
-  CAST(NULL AS STRING) AS invc_txn_type,
-  CAST(NULL AS STRING) AS invc_uom_cd,
-  CAST(NULL AS STRING) AS item_desc,
-  CAST(NULL AS STRING) AS item_nbr,
-  CAST(NULL AS STRING) AS lcr_flag,
-  CAST(NULL AS STRING) AS lcr_region,
-  CAST(NULL AS STRING) AS erp_cat_cd,
-  CAST(NULL AS STRING) AS erp_cat_nm,
-  CAST(NULL AS STRING) AS nature,
-  CAST(NULL AS STRING) AS part_rev_no,
-  CAST(NULL AS STRING) AS pass_through_field,
-  CAST(NULL AS STRING) AS pass_through_line,
-  CAST(NULL AS STRING) AS payment_compliance_flg,
-  CAST(NULL AS STRING) AS paymt_due_dt,
-  CAST(NULL AS STRING) AS po_curncy_cd,
-  CAST(NULL AS STRING) AS po_line_nbr,
-  CAST(NULL AS STRING) AS po_nbr,
-  CAST(NULL AS STRING) AS po_paymt_terms_cd,
-  CAST(NULL AS STRING) AS po_paymt_terms_desc,
-  CAST(NULL AS STRING) AS post_yr_mth_nbr,
-  CAST(NULL AS STRING) AS profit_cntr,
-  CAST(NULL AS STRING) AS remit_to_addr_line_1,
-  CAST(NULL AS STRING) AS remit_to_addr_line_2,
-  CAST(NULL AS STRING) AS remit_to_addr_line_3,
-  CAST(NULL AS STRING) AS remit_to_addr_line_4,
-  CAST(NULL AS STRING) AS remit_to_city_nm,
-  CAST(NULL AS STRING) AS remit_to_cntry_cd,
-  CAST(NULL AS STRING) AS remit_to_cntry_nm,
-  CAST(NULL AS STRING) AS remit_to_rgn_cd,
-  CAST(NULL AS STRING) AS remit_to_rgn_nm,
-  CAST(NULL AS STRING) AS remit_to_st_cd,
-  CAST(NULL AS STRING) AS reporting_site,
-  CAST(NULL AS STRING) AS rpt_flex1,
-  CAST(NULL AS STRING) AS sec_supp_cd,
-  CAST(NULL AS STRING) AS site_cd,
-  CAST(NULL AS STRING) AS site_name,
-  CAST(NULL AS STRING) AS spend_type_cd,
-  CAST(NULL AS STRING) AS src_sys_cd,
-  CAST(NULL AS STRING) AS suplr_invc_dt,
-  CAST(NULL AS STRING) AS suplr_invc_nbr,
-  CAST(NULL AS STRING) AS suplr_nm_src,
-  CAST(NULL AS STRING) AS suplr_paymt_terms_cd,
-  CAST(NULL AS STRING) AS suplr_paymt_terms_desc,
-  CAST(NULL AS STRING) AS supplier_cd,
-  CAST(NULL AS STRING) AS supplier_name,
-  CAST(NULL AS STRING) AS supplier_type_cd,
-  CAST(NULL AS STRING) AS thermo_item_nbr,
-  CAST(NULL AS DOUBLE) AS txn_curncy_mth_rt,
-  CAST(NULL AS STRING) AS txn_orig_id,
-  CAST(NULL AS STRING) AS txn_ref_nbr,
-  CAST(NULL AS STRING) AS unit,
-  CAST(NULL AS DOUBLE) AS unit_prc,
-  CAST(NULL AS DOUBLE) AS unit_prc_pmar_amt,
-  CAST(NULL AS DOUBLE) AS uom_conv_factor,
-  CAST(NULL AS STRING) AS vchr_line_nbr,
+  CAST(NULL AS string) AS erp_commondity_cd,
+  CAST(NULL AS string) AS erp_commondity_nm,
+  CAST(NULL AS bigint) AS fk_orig,
+  CAST(NULL AS string) AS floor_stock_cd,
+  coalesce(d_dt.fscl_yr_nbr , date_format(fct_supplier_invoice.ctransact_date,'yyyy')) AS fscl_yr_nbr,
+  fct.CGL_ACC_ALIAS_CD AS gl_acct_id,
+  fct.TGL_ACC_ALIAS_CD AS gl_acct_nm,
+  CAST(NULL AS string) AS hfm_entity,
+  CAST(NULL AS string) AS inv_flg,
+  fct.CITEM_DESCR AS inv_line_desc,
+  CAST(NULL AS string) AS invc_apprv_id,
+  if(t001.waers in ('JPY','KRW'),if(rkwa.shkzg='S',cast(coalesce(rkwa.wrbtr,0) as double) *
+ -100,cast(coalesce(rkwa.wrbtr,0)as double)*100),if(rkwa.shkzg='S',cast(coalesce(rkwa.wrbtr,0) as double) * 
+ -1,cast(coalesce(rkwa.wrbtr,0)as double)))
+ *
+ ( po_curr_mth.PO_PMAR_RT/co_curr_mth.CO_PMAR_RT) AS invc_co_amt,
+  CAST(NULL AS double) AS invc_co_pmar_amt,
+  fct.CINVOICE_DATE AS invc_entry_dt,
+  coalesce(d_dt_entry.fscl_yr_prd_nbr, date_format(fct_supplier_invoice.cinvoice_date,'yyyymm')) AS invc_entry_period,
+  fct.CTRANSACT_DATE AS invc_post_dt,
+  cast(if(rkwa.shkzg='S', coalesce(rkwa.bstmg,0) * -1,coalesce(rkwa.bstmg,0))as double) AS invc_qty,
+  fct.CRECEIPT_DATE AS invc_receipt_dt,
+  if(rkwa.bwaer in ('JPY','KRW'),if(rkwa.shkzg='S',cast(coalesce(rkwa.wrbtr,0)as double) *
+ -100,cast(coalesce(rkwa.wrbtr,0)as double)*100),if(rkwa.shkzg='S',cast(coalesce(rkwa.wrbtr,0)as double) * 
+ -1,cast(coalesce(rkwa.wrbtr,0)as double))) AS invc_txn_amt,
+  CAST(NULL AS double) AS invc_txn_pmar_amt,
+  CAST(NULL AS string) AS invc_txn_type,
+  fct.UCQUANTITY AS invc_uom_cd,
+  CAST(NULL AS string) AS item_desc,
+  fct.cproduct AS item_nbr,
+  CAST(NULL AS string) AS lcr_flag,
+  CAST(NULL AS string) AS lcr_region,
+  fct.CPRD_CATEGORY AS erp_cat_cd,
+  fct.TPRD_CATEGORY AS erp_cat_nm,
+  trim(upper(fct_supplier_invoice.creceiving_site)) = trim(upper(dim_product_1.csite_id)) AS nature,
+  CAST(NULL AS string) AS part_rev_no,
+  CAST(NULL AS string) AS pass_through_field,
+  CAST(NULL AS string) AS pass_through_line,
+  CAST(NULL AS string) AS payment_compliance_flg,
+  fct.CFULL_PAY_EDATE AS paymt_due_dt,
+  if(rkwa.bwaer='RMB','CNY',rkwa.bwaer) AS po_curncy_cd,
+  fct.CREF_PO_ITEM AS po_line_nbr,
+  fct.CREF_PO AS po_nbr,
+  CAST(NULL AS string) AS po_paymt_terms_cd,
+  CAST(NULL AS string) AS po_paymt_terms_desc,
+  coalesce(d_dt_pstng.fscl_yr_prd_nbr, date_format(fct_supplier_invoice.ctransact_date,'yyyyMM')) AS post_yr_mth_nbr,
+  fct.CBUYER AS profit_cntr,
+  CAST(NULL AS string) AS remit_to_addr_line_1,
+  CAST(NULL AS string) AS remit_to_addr_line_2,
+  CAST(NULL AS string) AS remit_to_addr_line_3,
+  CAST(NULL AS string) AS remit_to_addr_line_4,
+  fct.CCITY_NAME AS remit_to_city_nm,
+  fct.CCOUNTRY_CODE AS remit_to_cntry_cd,
+  fct.TCOUNTRY_CODE AS remit_to_cntry_nm,
+  CAST(NULL AS string) AS remit_to_rgn_cd,
+  CAST(NULL AS string) AS remit_to_rgn_nm,
+  fct.CREGION_CODE AS remit_to_st_cd,
+  CAST(NULL AS string) AS reporting_site,
+  CAST(NULL AS string) AS rpt_flex1,
+  CAST(NULL AS string) AS sec_supp_cd,
+  fct.CRECEIVING_SITE AS site_cd,
+  fct.TRECEIVING_SITE AS site_name,
+  CAST(NULL AS string) AS spend_type_cd,
+  'byd_brsbn' AS src_sys_cd,
+  fct.CINVOICE_DATE AS suplr_invc_dt,
+  fct.CREF_CIV AS suplr_invc_nbr,
+  'Invoice' AS suplr_nm_src,
+  CAST(NULL AS string) AS suplr_paymt_terms_cd,
+  CAST(NULL AS string) AS suplr_paymt_terms_desc,
+  fct.CSELLER AS supplier_cd,
+  fct.TSELLER AS supplier_name,
+  CAST(NULL AS string) AS supplier_type_cd,
+  CAST(NULL AS string) AS thermo_item_nbr,
+  cast(po_curr_mth.po_pmar_rt as double) AS txn_curncy_mth_rt,
+  CAST(NULL AS string) AS txn_orig_id,
+  CAST(NULL AS string) AS txn_ref_nbr,
+  CAST(NULL AS string) AS unit,
+  CAST(NULL AS double) AS unit_prc,
+  CAST(NULL AS double) AS unit_prc_pmar_amt,
+  CAST(NULL AS double) AS uom_conv_factor,
+  fct.CITEM_ID AS vchr_line_nbr,
   CAST(NULL AS STRING) AS vchr_nbr,
-  CAST(NULL AS STRING) AS vchr_status,
-  CAST(NULL AS STRING) AS vchr_type_cd,
-  CAST(NULL AS STRING) AS vchr_type_desc,
-  CAST(NULL AS STRING) AS vendor_mat_no,
-  CAST(NULL AS STRING) AS vomi_flag,
-  CAST(NULL AS STRING) AS warehouse,
-  CAST(NULL AS STRING) AS warehouse_nm,
-  CAST(NULL AS STRING) AS document_desc
+  CAST(NULL AS string) AS vchr_status,
+  fct.CITEM_TYPE AS vchr_type_cd,
+  fct.TITEM_TYPE AS vchr_type_desc,
+  trim(upper(fct_supplier_invoice.cprd_uuid)) = trim(upper(dim_product_1.cmatr_int_id)) and trim(upper(fct_supplier_invoice.creceiving_site)) = trim(upper(dim_product_1.csite_id)) AS vendor_mat_no,
+  'N' AS vomi_flag,
+  CAST(NULL AS string) AS warehouse,
+  CAST(NULL AS string) AS warehouse_nm,
+  fct.TINVOICE_TYCD AS document_desc
 FROM supplier_invoice_dedup fct
-LEFT JOIN dim_product_1 dim_prod ON trim(upper(fct.cprd_uuid)) = trim(upper(dim_prod.cmatr_int_id))
-LEFT OUTER JOIN edp_lkup edp ON edp.lkup_key_02 = fct.cbuyer AND upper(edp.lkup_typ_nm) = 'TFS_CO_CD_TO_DIV_CD_BU'
+LEFT JOIN dim_product_1 prod ON trim(upper(fct.cprd_uuid)) = trim(upper(prod.cmatr_int_id)) and trim(upper(fct.creceiving_site)) = trim(upper(prod.csite_id))
+LEFT OUTER JOIN edp_lkup lkup ON lkup.lkup_key_02 = fct.cbuyer and upper(lkup.lkup_typ_nm) = 'TFS_CO_CD_TO_DIV_CD_BU' and lower(lkup.lkup_key_01) = 'byd_brsbn'
 WHERE fct.CSELLER IS NOT NULL AND coalesce(trim(rkwa.belnr), '') != ''
