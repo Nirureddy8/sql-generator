@@ -6,14 +6,13 @@
 --   Pattern: dimension_flat
 
 /**************************************************************************
-Generated SQL transformation for d_customer table.
 Generated plan for d_customer dimension table.
 **************************************************************************/
 
 -- Query: d_customer_transformation
 -- Pattern: dimension_flat
 -- Coverage: 168 rows
--- WARNING: unresolved items: No source_table or source_field provided for any field in FIELD MAPPINGS.; No source_table or source_field provided for any field. All expressions defaulted to CAST(NULL AS string).
+-- WARNING: unresolved items: No source_table or source_field provided for any field. All expressions defaulted to CAST(NULL AS string).
 
 SELECT
   CAST(NULL AS string) AS src_sys_cd,
